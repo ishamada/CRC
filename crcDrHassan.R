@@ -1,18 +1,10 @@
 # Read in the raw read counts
-rawCounts <- read.delim("/home/islam/Downloads/E-GEOD-50760-raw-counts (1).tsv")
+rawCounts <- read.delim("http://genomedata.org/gen-viz-workshop/intro_to_deseq2/tutorial/E-GEOD-50760-raw-counts.tsv")
 head(rawCounts)
 
 # Read in the sample mappings
-sampleData <- read.delim("/home/islam/Downloads/E-GEOD-50760-experiment-design (1).tsv")
+sampleData <- read.delim("http://genomedata.org/gen-viz-workshop/intro_to_deseq2/tutorial/E-GEOD-50760-experiment-design.tsv")
 head(sampleData)
-
-
-# tmp <- (which(rawCountstemp$Gene.Name != "" ))
-
-# write.table(tmp, file='test.tsv')
-
-# length(unique(rawCountstemp$Gene.Name))
-
 
 
 # Also save a copy for later
