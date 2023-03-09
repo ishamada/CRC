@@ -1,5 +1,5 @@
 # Read in the raw read counts
-rawCounts <- read.delim("/home/islam/Downloads/E-GEOD-50760-raw-counts (1).tsv")
+rawCountsOrg <- read.delim("/home/islam/Downloads/E-GEOD-50760-raw-counts (1).tsv")
 head(rawCounts)
 
 # Read in the sample mappings
@@ -12,7 +12,6 @@ head(sampleData)
 # write.table(tmp, file='test.tsv')
 
 # length(unique(rawCountstemp$Gene.Name))
-
 
 
 # Also save a copy for later
@@ -135,6 +134,21 @@ head(deseq2VST)
 sigGenes <- rownames(deseq2ResDF[deseq2ResDF$padj <= .05 & abs(deseq2ResDF$log2FoldChange) > 3,])
 deseq2VST <- deseq2VST[deseq2VST$Gene %in% sigGenes,]
 
+which (as.matrix(rawCountsOrg$Gene.ID) == sigGenes)
+
+
+
+rawCountsOrg["ENSG00000065675"]
+
+rc <- as.matrix(rawCountsOrg)
+rc[sigGenes,]
+
+rownames(rc) <- (rawCountsOrg$Gene.ID)
+
+top222 <- rc[sigGenes,2]
+
+table(top222)
+
 # Convert the VST counts to long format for ggplot2
 library(reshape2)
 
@@ -220,6 +234,28 @@ heatmapGrob$widths <- as.list(maxWidth)
 finalGrob <- arrangeGrob(sampleDendrogramGrob, heatmapGrob, ncol=1, heights=c(2,5))
 
 # Draw the plot
+grid.draw(finalGrob)
+
+# ========================================
+
+# Re-order the sample data to match the clustering we did
+sampleData_v2$Run <- factor(sampleData_v2$Run, levels=clusterSample$labels[clusterSample$order])
+
+# Construct a plot to show the clinical data
+colours <- c("#743B8B", "#8B743B", "#8B3B52")
+sampleClinical <- ggplot(sampleData_v2, aes(x=Run, y=1, fill=Sample.Characteristic.biopsy.site.)) + geom_tile() + scale_x_discrete(expand=c(0, 0)) + scale_y_discrete(expand=c(0, 0)) + scale_fill_manual(name="Tissue", values=colours) + theme_void()
+
+# Convert the clinical plot to a grob
+sampleClinicalGrob <- ggplotGrob(sampleClinical)
+
+# Make sure every width between all grobs is the same
+maxWidth <- unit.pmax(sampleDendrogramGrob$widths, heatmapGrob$widths, sampleClinicalGrob$widths)
+sampleDendrogramGrob$widths <- as.list(maxWidth)
+heatmapGrob$widths <- as.list(maxWidth)
+sampleClinicalGrob$widths <- as.list(maxWidth)
+
+# Arrange and output the final plot
+finalGrob <- arrangeGrob(sampleDendrogramGrob, sampleClinicalGrob, heatmapGrob, ncol=1, heights=c(2,1,5))
 grid.draw(finalGrob)
 
 
