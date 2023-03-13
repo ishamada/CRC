@@ -259,6 +259,88 @@ finalGrob <- arrangeGrob(sampleDendrogramGrob, sampleClinicalGrob, heatmapGrob, 
 grid.draw(finalGrob)
 
 
+library(gage)
+
+library(DESeq2)
+
+tumor_v_normal_DE <- results(deseq2Data, contrast=c("tissueType", "primary colorectal cancer", "normal-looking surrounding colonic epithelium"))
+
+# set up kegg database
+kg.hsa <- kegg.gsets(species="hsa")
+kegg.sigmet.gs <- kg.hsa$kg.sets[kg.hsa$sigmet.idx]
+kegg.dise.gs <- kg.hsa$kg.sets[kg.hsa$dise.idx]
+
+# set up go database
+go.hs <- go.gsets(species="human")
+go.bp.gs <- go.hs$go.sets[go.hs$go.subs$BP]
+go.mf.gs <- go.hs$go.sets[go.hs$go.subs$MF]
+go.cc.gs <- go.hs$go.sets[go.hs$go.subs$CC]
+
+
+
+# load in libraries to annotate data
+library(AnnotationDbi)
+library(org.Hs.eg.db)
+
+# annotate the deseq2 results with additional gene identifiers
+tumor_v_normal_DE$symbol <- mapIds(org.Hs.eg.db, keys=row.names(tumor_v_normal_DE), column="SYMBOL", keytype="ENSEMBL", multiVals="first")
+tumor_v_normal_DE$entrez <- mapIds(org.Hs.eg.db, keys=row.names(tumor_v_normal_DE), column="ENTREZID", keytype="ENSEMBL", multiVals="first")
+tumor_v_normal_DE$name <- mapIds(org.Hs.eg.db, keys=row.names(tumor_v_normal_DE), column="GENENAME", keytype="ENSEMBL", multiVals="first")
+
+
+# grab the log fold changes for everything
+tumor_v_normal_DE.fc <- tumor_v_normal_DE$log2FoldChange
+names(tumor_v_normal_DE.fc) <- tumor_v_normal_DE$entrez
+
+
+# Run enrichment analysis on all log fc
+fc.kegg.sigmet.p <- gage(tumor_v_normal_DE.fc, gsets = kegg.sigmet.gs)
+fc.kegg.dise.p <- gage(tumor_v_normal_DE.fc, gsets = kegg.dise.gs)
+fc.go.bp.p <- gage(tumor_v_normal_DE.fc, gsets = go.bp.gs)
+fc.go.mf.p <- gage(tumor_v_normal_DE.fc, gsets = go.mf.gs)
+fc.go.cc.p <- gage(tumor_v_normal_DE.fc, gsets = go.cc.gs)
+
+
+# covert the kegg results to data frames
+fc.kegg.sigmet.p.up <- as.data.frame(fc.kegg.sigmet.p$greater)
+fc.kegg.dise.p.up <- as.data.frame(fc.kegg.dise.p$greater)
+
+fc.kegg.sigmet.p.down <- as.data.frame(fc.kegg.sigmet.p$less)
+fc.kegg.dise.p.down <- as.data.frame(fc.kegg.dise.p$less)
+
+# convert the go results to data frames
+fc.go.bp.p.up <- as.data.frame(fc.go.bp.p$greater)
+fc.go.mf.p.up <- as.data.frame(fc.go.mf.p$greater)
+fc.go.cc.p.up <- as.data.frame(fc.go.cc.p$greater)
+
+fc.go.bp.p.down <- as.data.frame(fc.go.bp.p$less)
+fc.go.mf.p.down <- as.data.frame(fc.go.mf.p$less)
+fc.go.cc.p.down <- as.data.frame(fc.go.cc.p$less)
+
+
+
+dim(fc.go.bp.p.up)
+
+
+
+# Load the AnnotationDbi package and the GO.db package
+library(AnnotationDbi)
+library(GO.db)
+
+# Choose a specific GO term you are interested in, for example "GO:0042254" (cellularization)
+go_id <- "GO:0042254"
+
+# Get the gene IDs associated with the GO term using the GO.db package
+genes <- select(org.Hs.eg.db, keys =  "GO:0032392" , columns = c("ENTREZID","ENSEMBL","SYMBOL"), keytype = "GO")
+
+keytypes(org.Hs.eg.db)
+columns(GO.db)
+
+
+# View the list of gene IDs
+genes$ENTREZID
+
+
 
 
 
