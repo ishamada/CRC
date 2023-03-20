@@ -258,6 +258,7 @@ sampleClinicalGrob$widths <- as.list(maxWidth)
 finalGrob <- arrangeGrob(sampleDendrogramGrob, sampleClinicalGrob, heatmapGrob, ncol=1, heights=c(2,1,5))
 grid.draw(finalGrob)
 
+#====================================
 
 library(gage)
 
@@ -265,17 +266,22 @@ library(DESeq2)
 
 tumor_v_normal_DE <- results(deseq2Data, contrast=c("tissueType", "primary colorectal cancer", "normal-looking surrounding colonic epithelium"))
 
-# set up kegg database
+
+
+# set up KEGG database
 kg.hsa <- kegg.gsets(species="hsa")
+
+
 kegg.sigmet.gs <- kg.hsa$kg.sets[kg.hsa$sigmet.idx]
 kegg.dise.gs <- kg.hsa$kg.sets[kg.hsa$dise.idx]
 
-# set up go database
+# set up GO database
 go.hs <- go.gsets(species="human")
 go.bp.gs <- go.hs$go.sets[go.hs$go.subs$BP]
 go.mf.gs <- go.hs$go.sets[go.hs$go.subs$MF]
 go.cc.gs <- go.hs$go.sets[go.hs$go.subs$CC]
 
+go.bp.gs$`GO:0000097 sulfur amino acid biosynthetic process`[1]
 
 
 # load in libraries to annotate data
@@ -331,10 +337,13 @@ library(GO.db)
 go_id <- "GO:0042254"
 
 # Get the gene IDs associated with the GO term using the GO.db package
-genes <- select(org.Hs.eg.db, keys =  "GO:0032392" , columns = c("ENTREZID","ENSEMBL","SYMBOL"), keytype = "GO")
+genes <- select(org.Hs.eg.db, keys =  "GO:0006268" , columns = c("ENTREZID","ENSEMBL","SYMBOL"), keytype = "GO")
 
-keytypes(org.Hs.eg.db)
+columns(org.Hs.eg.db)
 columns(GO.db)
+
+genes <- select(org.Hs.eg.db, keys =  "PLA2G6" , columns = c("ENTREZID","ENSEMBL","SYMBOL"), keytype = "SYMBOL")
+
 
 
 # View the list of gene IDs
@@ -342,7 +351,63 @@ genes$ENTREZID
 
 
 
+packageVersion("org.Hs.eg.db")
+?org.Hs.eg.db
 
+
+################################################################################
+################ Exercise 1 ####################################################
+
+#!!!!!!!!!! "fc.go.bp.p.up" and "go.bp.gs" should already be in your R environment, see tutorial above !!!!!!!!!#
+
+# get genes associated with pathways
+a <- function(sigPathways, geneSetDB){
+  
+  # grab the names of all significant pathways
+  sigPathwaysID <- rownames(sigPathways)
+  
+  # subset the geneSet list to only those in the significant pathways
+  sigPathwaysGenes <- geneSetDB[which(names(geneSetDB) %in% sigPathwaysID)]
+  numberSigPathways <- length(sigPathwaysGenes)
+  sigPathwaysGenes <- unlist(sigPathwaysGenes)
+  
+  # count the number of times a gene occurs in these significant pathways
+  sigPathwaysTable <- plyr::count(sigPathwaysGenes)
+  
+  # annotate these final results with the gene symbol and some extra information
+  sigPathwaysTable$symbol <- mapIds(org.Hs.eg.db, keys=as.character(sigPathwaysTable$x), column="SYMBOL", keytype="ENTREZID", multiVals="first")
+  sigPathwaysTable$proportion <- sigPathwaysTable$freq/numberSigPathways
+  
+  # sort and return the results
+  sigPathwaysTable <- sigPathwaysTable[order(-sigPathwaysTable$proportion),]
+  
+  return(sigPathwaysTable)
+}
+
+# run the function defined above
+geneTable1 <- a(na.omit(fc.go.bp.p.up[fc.go.bp.p.up$q.val <= .05,]), go.bp.gs)
+geneTable2 <- a(na.omit(fc.kegg.sigmet.p.up[fc.kegg.sigmet.p.up$q.val <= .05,]), kegg.sigmet.gs)
+geneTable3 <- a((fc.kegg.dise.p.up[fc.kegg.dise.p.up,]), kegg.dise.gs)
+geneTable4 <- a(na.omit(fc.go.mf.p.up[fc.go.mf.p.up$q.val <= .05,]), go.mf.gs)
+geneTable5 <- a(na.omit(fc.go.cc.p.up[fc.go.cc.p.up$q.val <= .05,]), go.cc.gs)
+
+#========== pathway viz ====
+
+library(pathview)
+
+
+# View the hsa03430 pathway from the pathway analysis
+fc.kegg.sigmet.p.up[grepl("hsa03430", rownames(fc.kegg.sigmet.p.up), fixed=TRUE),]
+
+# Overlay the expression data onto this pathway
+pathview(gene.data=tumor_v_normal_DE.fc, species="hsa", pathway.id="hsa03430")
+
+
+# View the hsa03430 pathway from the pathway analysis
+fc.kegg.sigmet.p.up[grepl("hsa03460", rownames(fc.kegg.sigmet.p.up), fixed=TRUE),]
+
+# Overlay the expression data onto this pathway
+pathview(gene.data=tumor_v_normal_DE.fc, species="hsa", pathway.id="hsa03460", kegg.native=FALSE)
 
 
 
